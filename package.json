@@ -1,0 +1,41 @@
+{
+    "name": "email-service",
+    "version": "1.0.0",
+    "description": "The application provide an abstraction between two different email service providers",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "email",
+        "mailgun",
+        "sendgrid"
+    ],
+    "author": "Can Ho",
+    "license": "ISC",
+    "dependencies": {
+        "@hapi/glue": "^6.2.0",
+        "@hapi/hapi": "^18.4.0",
+        "@hapi/joi": "^16.1.8",
+        "request": "^2.88.0",
+        "request-promise": "^4.2.5"
+    },
+    "devDependencies": {
+        "blipp": "^4.0.1",
+        "husky": "^3.1.0",
+        "lint-staged": "^9.5.0",
+        "prettier": "^1.19.1"
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged"
+        }
+    },
+    "lint-staged": {
+        "*.js": [
+            "prettier --write",
+            "git add"
+        ]
+    }
+}
