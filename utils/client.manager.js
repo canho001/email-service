@@ -1,13 +1,16 @@
 const { clients } = require("./mail.clients");
+const logger = require("./logger");
 
 const RETRY_AFTER_MS = 2 * 60 * 1000; // 2 minutes
 
 class ClientManager {
+  //@TODO: validate clients: array of event emitters
   constructor(clients) {
     this.clients = clients;
     this.errorMap = {};
     this.successMap = {};
     this.curIdx = -1;
+    this.retryAfterMs = RETRY_AFTER_MS;
     clients.map(client => {
       this.successMap[client.getName()] = {
         count: 0,
@@ -22,17 +25,18 @@ class ClientManager {
     });
   }
   handleError(err, clientName) {
-    //this.errorMap[clientName] = this.errorMap[clientName] + 1;
     this._update("errorMap", clientName);
-    console.log("error ", this.errorMap);
+    logger.info("error ", this.errorMap);
   }
   handleSucess(clientName) {
-    //this.successMap[clientName] = this.successMap[clientName] + 1;
     this._update("successMap", clientName);
-    console.log("success ", this.successMap);
+    logger.info("success ", this.successMap);
   }
   next() {
-    return this._find(this.clients.length - 1);
+    return this._find(this.clients.length);
+  }
+  updateRetryAfterMs(retryAfterMs) {
+    this.retryAfterMs = retryAfterMs;
   }
   _update(map, name) {
     const o = this[map][name];
@@ -55,11 +59,11 @@ class ClientManager {
     }
     if (
       successInfo.count > 0 &&
-      successInfo.lastEventAt > errorInfo.lastEventAt
+      successInfo.lastEventAt >= errorInfo.lastEventAt
     ) {
       return c;
     }
-    if (Date.now() - errorInfo.lastEventAt > RETRY_AFTER_MS) {
+    if (Date.now() - errorInfo.lastEventAt > this.retryAfterMs) {
       return c;
     }
 
@@ -68,3 +72,4 @@ class ClientManager {
 }
 
 module.exports.clientManager = new ClientManager(clients);
+module.exports.ClientManager = ClientManager;

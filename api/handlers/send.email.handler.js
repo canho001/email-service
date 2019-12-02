@@ -1,17 +1,32 @@
 const Joi = require("@hapi/joi");
-const { sendMail } = require("../services/send.email.svc");
+const Boom = require("@hapi/boom");
+
+const mailSvc = require("../services/send.email.svc");
+const logger = require("../../utils/logger");
+
 /**
  * Send email using one of configured email items
  * @param from
  * @param to
  * @param subject
  */
-exports.sendMailHandler = function sendMailHandler(req, h) {
-  return sendMail(req.payload);
+exports.sendMailHandler = async function sendMailHandler(req, h) {
+  try {
+    await mailSvc.sendMail(req.payload);
+    return {
+      statusCode: 200,
+      message: "Email sent successfully"
+    };
+  } catch (e) {
+    logger.error(e);
+    return Boom.badImplementation();
+  }
 };
 
 exports.emailSchema = Joi.object({
-  from: Joi.string().email(),
+  from: Joi.string()
+    .email()
+    .required(),
   to: Joi.alternatives()
     .try(
       Joi.array()
@@ -24,7 +39,8 @@ exports.emailSchema = Joi.object({
     .try(
       Joi.array()
         .items(Joi.string().email())
-        .min(1),
+        .min(1)
+        .max(100),
       Joi.string().email()
     )
     .optional(),
@@ -32,7 +48,8 @@ exports.emailSchema = Joi.object({
     .try(
       Joi.array()
         .items(Joi.string().email())
-        .min(1),
+        .min(1)
+        .max(100),
       Joi.string().email()
     )
     .optional(),

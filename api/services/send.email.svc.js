@@ -1,11 +1,7 @@
-const rp = require("request-promise");
-const Joi = require("@hapi/joi");
-const { pick } = require("../../utils/");
-const { clientManager } = require("./client.manager");
+const logger = require("../../utils/logger");
+const { clientManager } = require("../../utils/client.manager");
+const { ServerError, RemoteEmailServerError } = require("../../utils/errors");
 
-//const pickGen = pick(clients);
-
-// const proxySend = createProxy(send);
 /**
  * Send email using one of configured email items
  * @param from
@@ -13,14 +9,28 @@ const { clientManager } = require("./client.manager");
  * @param subject
  */
 
-exports.sendMail = async function sendMail(
-  { from, to, subject, cc = [], bcc = [], text = "" } = {},
+exports.sendMail = async function sendMail({
+  from,
+  to,
+  subject,
+  cc = [],
+  bcc = [],
+  text = ""
+} = {}) {
+  return sendMailWithTry({ from, to, subject, cc, bcc, text });
+};
+
+async function sendMailWithTry(
+  { from, to, subject, cc, bcc, text } = {},
   tryCount = 2
 ) {
   if (tryCount === 0) {
-    throw new Error("Failed to send");
+    throw new RemoteEmailServerError("Failed to send email after retrying");
   }
   const client = clientManager.next();
+  if (!client) {
+    throw new ServerError("Unable to find mail client");
+  }
   try {
     await client.send({
       from,
@@ -32,49 +42,25 @@ exports.sendMail = async function sendMail(
     });
     return true;
   } catch (e) {
-    console.log(
-      `Failed to send email using mail client ${client.getName()}. Retrying...`
-    );
-    sendMail(
-      {
-        from,
-        to,
-        subject,
-        cc,
-        bcc,
-        text
-      },
-      tryCount - 1
-    );
-  }
-};
-
-async function send(options) {
-  return rp(options);
-}
-
-function createProxy(fn, monitor) {
-  return new Proxy(fn, {
-    apply: async function(target, thisArg, argumentsList) {
-      console.log("calling target function", argumentsList);
-      const start = process.hrtime();
-      try {
-        const result = await Reflect.apply(target, thisArg, argumentsList);
-        const end = process.hrtime(start);
-        console.log("execution time %dms", end[1] / 1000000);
-      } catch (e) {
-        //monitor.update()
-      }
+    if (e.statusCode >= 500) {
+      // only retry with other client when error is on the server end
+      logger.debug(
+        `Failed to send email using mail client ${client.getName()}. Retrying...`,
+        e
+      );
+      return sendMailWithTry(
+        {
+          from,
+          to,
+          subject,
+          cc,
+          bcc,
+          text
+        },
+        tryCount - 1
+      );
+    } else {
+      throw e;
     }
-  });
-}
-
-function monitor(mailers) {
-  return {
-    get: function get() {
-      //return next healthy mail service
-    },
-    mon: function() {},
-    err: function() {}
-  };
+  }
 }

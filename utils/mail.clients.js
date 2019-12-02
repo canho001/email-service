@@ -1,6 +1,7 @@
 const EventEmitter = require("events");
 const rp = require("request-promise");
-const { mailers } = require("../../config/mailers.js");
+const { mailers } = require("../config/mailers.js");
+const { ObjectNotInitializedError } = require("./errors");
 
 class MailClient extends EventEmitter {
   constructor() {
@@ -14,7 +15,7 @@ class MailClient extends EventEmitter {
   }
   async send({ from, to, subject, cc = [], bcc = [], text = "" } = {}) {
     if (!this._configured) {
-      throw new Error(`Mail client not configured yet`);
+      throw new ObjectNotInitializedError(`Mail client not configured yet`);
     }
     const {
       apiKey,
@@ -45,12 +46,14 @@ class MailClient extends EventEmitter {
       this.emit("mail_sent_success", name);
       return result;
     } catch (e) {
-      console.log(e);
       this.emit("mail_sent_error", e, name);
       throw e;
     }
   }
   getName() {
+    if (!this._configured) {
+      throw new ObjectNotInitializedError(`Mail client not configured yet`);
+    }
     return this.config.name;
   }
 }
@@ -58,3 +61,4 @@ class MailClient extends EventEmitter {
 const clients = mailers.map(mailer => new MailClient().configure(mailer));
 
 exports.clients = clients;
+exports.MailClient = MailClient;

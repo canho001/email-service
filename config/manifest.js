@@ -6,7 +6,7 @@ const envKey = key => {
       host: "localhost",
       port: 3000
     },
-    uat: {
+    test: {
       host: "localhost",
       port: 8010
     },
