@@ -28,6 +28,8 @@ All the mail clients are configured in config/mailers
 
 #### Improvements
 
+• Make some private properties in `utils` classes `private`
+
 • Health check: should call one of email servers' health check api (couldn't find one so far)
 
 • Dockerize the app
